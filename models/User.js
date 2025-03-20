@@ -7,11 +7,11 @@ const User = db.define("User", {
     type: DataTypes.STRING,
     require: true,
   },
-  name: {
+  email: {
     type: DataTypes.STRING,
     require: true,
   },
-  name: {
+  password: {
     type: DataTypes.STRING,
     require: true,
   },
