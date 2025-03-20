@@ -1,9 +1,40 @@
 const Tought = require("../models/Tought");
 const User = require("../models/User");
 
+const { Op } = require("sequelize"); // Operador de busca do sequelize
+
 module.exports = class ToughtController {
   static async showToughts(req, res) {
-    res.render("toughts/home");
+    let search = "";
+
+    if (req.query.search) {
+      search = req.query.search;
+    }
+
+    let order = 'DESC' // DESC = Decrescente
+
+    if(req.query.order === 'old'){
+      order = 'ASC' // ASC = Crescente
+    }else{
+      order = 'DESC' // DESC = Decrescente
+    }
+
+    const toughtsData = await Tought.findAll({
+      include: User,
+      where: {
+        title: { [Op.like]: `%${search}%` },
+      },
+      order: [['createdAt', order]],
+    });
+    const toughts = toughtsData.map((result) => result.get({ plain: true }));
+    
+    let toughtsQty = toughts.length
+
+    if(toughtsQty === 0){
+      toughtsQty = false
+    }
+
+    res.render("toughts/home", { toughts, search, toughtsQty });
   }
 
   static async dashboard(req, res) {
@@ -22,13 +53,11 @@ module.exports = class ToughtController {
     }
 
     const toughts = user.Toughts.map((result) => result.dataValues);
-    let emptyToughts = false
+    let emptyToughts = false;
 
-
-    if(toughts.length === 0){
-        emptyToughts = true
+    if (toughts.length === 0) {
+      emptyToughts = true;
     }
-
 
     res.render("toughts/dashboard", { toughts, emptyToughts });
   }
@@ -64,19 +93,36 @@ module.exports = class ToughtController {
       req.flash("message", "Pensamento removido com sucesso");
 
       req.session.save(() => {
-        res.redirect('/toughts/dashboard')
-      })
+        res.redirect("/toughts/dashboard");
+      });
     } catch (err) {
       console.log(err);
     }
   }
 
+  static async updateTought(req, res) {
+    const id = req.params.id;
 
-  static async updateTought(req, res){
-    const id = req.params.id
+    const tought = await Tought.findOne({ where: { id: id }, raw: true });
 
-    const tought = Tought.findOne({where: {id: id} })
+    res.render("toughts/edit", { tought });
+  }
 
-    res.render('/toughts/edit')
+  static async updateToughtSave(req, res) {
+    const id = req.body.id;
+    const tought = {
+      title: req.body.title,
+    };
+
+    try {
+      await Tought.update(tought, { where: { id: id } });
+      req.flash("message", "Pensamento atualizado com sucesso");
+
+      req.session.save(() => {
+        res.redirect("/toughts/dashboard");
+      });
+    } catch (err) {
+      console.log(err);
+    }
   }
 };
